@@ -197,7 +197,7 @@
     <h2>Research</h2>
 
     <div class="work-item">
-      <div class="work-meta">2026<br>arXiv · KDD</div>
+      <div class="work-meta">2026<br>arXiv</div>
       <div>
         <p class="work-title">Evaluation Awareness in Large Language Models</p>
         <p class="work-desc">Mapped how evaluation awareness scales across compact architectures (Gemma 3, Phi-3, Llama-3 8B) using CoT analysis, representation probing, and Integrated Gradients attribution. Built a dual-pathway mitigation pipeline which uses prompt sanitization plus activation counter-steering, reaching a 70.58% average behavioral flip rate across 200 high-confidence prompts.</p>
@@ -226,7 +226,7 @@
       <div class="work-meta">2025<br>Independent</div>
       <div>
         <p class="work-title">Replication Studies & Data Attribution</p>
-        <p class="work-desc">Replicated foundational mechanistic interpretability findings focusing on circuit discovery and linear representation hypotheses. Applied these frameworks to novel data attribution experiments, investigating whether intervening on linear vectors in embedded vs. unembedded spaces or discrete circuits better isolates the emergence of concepts during pre-training.</p>
+        <p class="work-desc">Replicated foundational mechanistic interpretability findings focusing on circuit discovery and linear representation hypotheses, adversarial training and simplicity bias.</p>
         <p class="work-tags"></p>
       </div>
     </div>
@@ -261,10 +261,10 @@
   <span></span>
 </footer>
 <script>
-  // Latent Space Flow Field Simulation
-  // Visualizes a continuous vector field (model latent space) where particles 
-  // (activations) drift slowly. As they align with certain mathematical directions 
-  // (features), they transition from Noise (Teal) to Signal (Gold).
+  // Transformer Residual Stream Simulation
+  // Visualizes data flowing left-to-right along a main "highway" (residual stream).
+  // Particles branch into computation blocks (Attention/MLP) and write back.
+  // Processed signals generate text at the end of the stream.
   
   const canvas = document.getElementById('noiseCanvas');
   const ctx = canvas.getContext('2d');
@@ -281,75 +281,169 @@
   const H = () => canvas.offsetHeight;
 
   let particles = [];
-  let time = 0;
+  let blocks = [];
+  let displayedText = [];
+  
+  // The sentences the model is "generating"
+  const sentences = [
+    "attention heads route the relevant context.",
+    "linear representations solidify in the stream.",
+    "evaluation awareness emerges during pre-training.",
+    "circuits crystallize from latent noise.",
+    "probing the residual stream reveals hidden states."
+  ];
+  let sentenceIdx = 0;
+  let wordIdx = 0;
 
   function initSystem() {
     particles = [];
-    // Calculate number of particles based on screen width for performance
-    const numParticles = W() > 600 ? 450 : 150;
+    blocks = [];
+    displayedText = [];
     
-    for(let i = 0; i < numParticles; i++) {
-      particles.push({
-        x: Math.random() * W(),
-        y: Math.random() * H(),
-        vx: 0,
-        vy: 0,
-        size: Math.random() * 1.2 + 0.3 // Very small for subtlety
+    // Define Transformer Blocks along the stream
+    const numBlocks = W() > 600 ? 5 : 3;
+    const startX = W() * 0.1;
+    const endX = W() * 0.65; // Leave right side for text
+    const spacing = (endX - startX) / numBlocks;
+
+    for(let i = 0; i < numBlocks; i++) {
+      blocks.push({
+        x: startX + i * spacing + spacing/2,
+        width: 40,
+        active: 0
       });
+    }
+  }
+
+  function spawnParticle(isMajor = false) {
+    particles.push({
+      x: 0,
+      y: H() / 2,
+      baseY: H() / 2,
+      vx: 1.5 + Math.random() * 1.5,
+      branching: false,
+      branchDir: Math.random() > 0.5 ? 1 : -1,
+      isMajor: isMajor, // Major particles trigger words
+      colorPhase: 0 // 0 to 1 (Teal to Gold)
+    });
+  }
+
+  function triggerNextWord() {
+    let currentWords = sentences[sentenceIdx].split(" ");
+    
+    if (wordIdx < currentWords.length) {
+      displayedText.push({
+        word: currentWords[wordIdx],
+        yOffset: 0,
+        alpha: 1
+      });
+      wordIdx++;
+    } else {
+      // Move to next sentence
+      sentenceIdx = (sentenceIdx + 1) % sentences.length;
+      wordIdx = 0;
+      // Add a visual space between sentences
+      displayedText.push({ word: "", yOffset: 0, alpha: 1 }); 
+    }
+
+    // Keep only the last 8-10 words on screen to prevent clutter
+    if (displayedText.length > 8) {
+      displayedText.shift();
     }
   }
 
   window.addEventListener('resize', resize);
   resize();
 
+  // Spawn initial particles
+  setInterval(() => { if(!prefersReduced) spawnParticle(Math.random() > 0.85); }, 200);
+
   function frame(){
-    // Instead of clearing the canvas completely, we draw a very faint dark 
-    // rectangle over it. This creates soft, blurry, fading trails.
-    ctx.fillStyle = 'rgba(14, 17, 22, 0.08)'; // Matches --bg
+    // Soft clear for trailing effect
+    ctx.fillStyle = 'rgba(14, 17, 22, 0.15)'; // --bg
     ctx.fillRect(0, 0, W(), H());
     
-    // Slow evolution of the mathematical space
-    time += 0.0015; 
+    const streamY = H() / 2;
 
-    particles.forEach(p => {
-      // 1. Calculate the Vector Field
-      // We use sine/cosine math to create a continuous, flowing landscape
-      let nx = p.x * 0.002;
-      let ny = p.y * 0.002;
+    // 1. Draw the Residual Stream Highway
+    ctx.beginPath();
+    ctx.moveTo(0, streamY);
+    ctx.lineTo(W() * 0.7, streamY);
+    ctx.strokeStyle = 'rgba(79, 209, 197, 0.15)'; // Faint teal
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // 2. Draw Transformer Blocks
+    blocks.forEach(b => {
+      ctx.fillStyle = `rgba(38, 43, 52, 0.5)`; // --panel-line
+      ctx.fillRect(b.x - b.width/2, streamY - 40, b.width, 80);
       
-      // The angle determines which direction the particle is pushed
-      let angle = (Math.sin(nx + time) + Math.cos(ny - time)) * Math.PI * 2;
-      
-      // 2. Move Particle (Incredibly slowly)
-      let speed = 0.35;
-      p.vx = Math.cos(angle) * speed;
-      p.vy = Math.sin(angle) * speed;
-      
+      // Block border pulse
+      ctx.strokeStyle = `rgba(201, 162, 39, ${b.active})`;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(b.x - b.width/2, streamY - 40, b.width, 80);
+      b.active *= 0.9; // decay
+    });
+
+    // 3. Update & Draw Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
       p.x += p.vx;
-      p.y += p.vy;
-
-      // Wrap around the screen seamlessly
-      if(p.x < 0) p.x = W();
-      if(p.x > W()) p.x = 0;
-      if(p.y < 0) p.y = H();
-      if(p.y > H()) p.y = 0;
-
-      // 3. Color mapping (Feature Alignment)
-      // Normalize the angle to a 0 to 1 scale
-      let normAngle = Math.abs((angle % Math.PI) / Math.PI);
       
-      // Smoothly mix colors based on their direction of travel
-      // Teal (Noise): 79, 209, 197 | Gold (Signal): 201, 162, 39
-      let r = Math.round(79 + (201 - 79) * normAngle);
-      let g = Math.round(209 + (162 - 209) * normAngle);
-      let b = Math.round(197 + (39 - 197) * normAngle);
+      // Color shift based on progress across the screen
+      p.colorPhase = Math.min(1, p.x / (W() * 0.65));
+      let r = Math.round(79 + (201 - 79) * p.colorPhase);
+      let g = Math.round(209 + (162 - 209) * p.colorPhase);
+      let b = Math.round(197 + (39 - 197) * p.colorPhase);
 
-      // Keep opacity extremely low (0.3) for readability
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
-      
+      // Math for branching in blocks
+      let inBlock = false;
+      blocks.forEach(block => {
+        let dist = Math.abs(p.x - block.x);
+        if (dist < block.width) {
+          inBlock = true;
+          block.active = Math.max(block.active, 0.3); // trigger block glow
+          
+          // Arch computation pathway (Read from stream -> Compute -> Write to stream)
+          let arch = Math.sin((1 - (dist / block.width)) * Math.PI);
+          p.y = p.baseY + (arch * 30 * p.branchDir);
+        }
+      });
+
+      if (!inBlock) {
+        // Smoothly return to the main stream
+        p.y += (p.baseY - p.y) * 0.1; 
+      }
+
+      // Draw particle
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.isMajor ? 3 : 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.isMajor ? 0.8 : 0.4})`;
       ctx.fill();
+
+      // End of stream logic
+      if (p.x > W() * 0.7) {
+        if (p.isMajor) triggerNextWord();
+        particles.splice(i, 1);
+      }
+    }
+
+    // 4. Draw Generated Text
+    ctx.font = "14px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "left";
+    
+    let textX = W() * 0.75;
+    let textY = streamY - (displayedText.length * 10); // Center vertically
+
+    displayedText.forEach((item, index) => {
+      // Fade out older words
+      item.alpha = Math.min(1, index / 4);
+      ctx.fillStyle = `rgba(201, 162, 39, ${item.alpha})`; // Gold text
+      
+      if (item.word !== "") {
+        ctx.fillText(item.word, textX, textY);
+      }
+      textY += 24; // line height
     });
 
     if (!prefersReduced) requestAnimationFrame(frame);
@@ -358,10 +452,11 @@
   if (!prefersReduced) {
     requestAnimationFrame(frame);
   } else {
-    // Fallback for reduced motion: draw a static, faint cloud representation
+    // Reduced motion fallback
     ctx.clearRect(0,0,W(),H());
-    ctx.fillStyle = 'rgba(79, 209, 197, 0.05)';
-    ctx.fillRect(0,0,W(),H());
+    ctx.font = "14px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = "#C9A227";
+    ctx.fillText("> model output generating...", W()*0.1, H()/2);
   }
 </script>
 </body>
