@@ -174,8 +174,7 @@
     <div class="hero-links">
       <a href="mailto:ms22110@iisermohali.ac.in">email</a>
       <a href="https://github.com/chahal-navi">github</a>
-      <a href="#">arXiv</a>
-      <a href="#">CV (PDF)</a>
+      <a href="CV_Navraj.pdf" target="_blank">CV (PDF)</a>
     </div>
   </div>
 </header>
@@ -261,10 +260,10 @@
   <span></span>
 </footer>
 <script>
-  // Transformer Residual Stream Simulation
-  // Visualizes data flowing left-to-right along a main "highway" (residual stream).
-  // Particles branch into computation blocks (Attention/MLP) and write back.
-  // Processed signals generate text at the end of the stream.
+  // Transformer Highway (Residual Stream) Simulation
+  // Multi-lane highway where activations (particles) are routed into 
+  // "Toll Booths" (Attention/MLP heads) for processing, turn gold, 
+  // and merge back into the main stream.
   
   const canvas = document.getElementById('noiseCanvas');
   const ctx = canvas.getContext('2d');
@@ -281,50 +280,61 @@
   const H = () => canvas.offsetHeight;
 
   let particles = [];
-  let blocks = [];
+  let heads = [];
   let displayedText = [];
   
-  // The sentences the model is "generating"
+  // Custom Personal Sentences
   const sentences = [
-    "attention heads route the relevant context.",
-    "linear representations solidify in the stream.",
-    "evaluation awareness emerges during pre-training.",
-    "circuits crystallize from latent noise.",
-    "probing the residual stream reveals hidden states."
+    "hello.",
+    "i am navraj.",
+    "welcome to my digital space.",
+    "i study neural networks.",
+    "i analyze hidden behaviors.",
+    "let's map the latent space."
   ];
   let sentenceIdx = 0;
   let wordIdx = 0;
 
+  // Highway Settings
+  const numLanes = 6;
+  const laneSpacing = 14;
+
   function initSystem() {
     particles = [];
-    blocks = [];
     displayedText = [];
     
-    // Define Transformer Blocks along the stream
-    const numBlocks = W() > 600 ? 5 : 3;
-    const startX = W() * 0.1;
-    const endX = W() * 0.65; // Leave right side for text
-    const spacing = (endX - startX) / numBlocks;
+    // Define Toll Booths (Attention Heads) positioned above and below the highway
+    const numHeads = W() > 600 ? 4 : 2;
+    const startX = W() * 0.15;
+    const endX = W() * 0.60; 
+    const spacing = (endX - startX) / numHeads;
 
-    for(let i = 0; i < numBlocks; i++) {
-      blocks.push({
+    heads = [];
+    for(let i = 0; i < numHeads; i++) {
+      // Alternate placing them above and below the highway
+      const isTop = i % 2 === 0;
+      heads.push({
         x: startX + i * spacing + spacing/2,
-        width: 40,
+        yOffset: isTop ? -75 : 75, 
+        width: 45,
         active: 0
       });
     }
   }
 
   function spawnParticle(isMajor = false) {
+    // Pick a random lane
+    const lane = Math.floor(Math.random() * numLanes);
+    
     particles.push({
       x: 0,
-      y: H() / 2,
-      baseY: H() / 2,
-      vx: 1.5 + Math.random() * 1.5,
-      branching: false,
-      branchDir: Math.random() > 0.5 ? 1 : -1,
-      isMajor: isMajor, // Major particles trigger words
-      colorPhase: 0 // 0 to 1 (Teal to Gold)
+      lane: lane,
+      vx: 1.5 + Math.random() * 2,
+      isMajor: isMajor,
+      processed: false,
+      // 50% chance to stay on highway, 50% chance to route to a random toll booth
+      targetHead: Math.random() > 0.5 ? heads[Math.floor(Math.random() * heads.length)] : null,
+      alpha: Math.random() * 0.5 + 0.3
     });
   }
 
@@ -334,55 +344,65 @@
     if (wordIdx < currentWords.length) {
       displayedText.push({
         word: currentWords[wordIdx],
-        yOffset: 0,
         alpha: 1
       });
       wordIdx++;
     } else {
-      // Move to next sentence
       sentenceIdx = (sentenceIdx + 1) % sentences.length;
       wordIdx = 0;
-      // Add a visual space between sentences
-      displayedText.push({ word: "", yOffset: 0, alpha: 1 }); 
+      displayedText.push({ word: "", alpha: 1 }); 
     }
 
-    // Keep only the last 8-10 words on screen to prevent clutter
-    if (displayedText.length > 8) {
-      displayedText.shift();
-    }
+    if (displayedText.length > 8) displayedText.shift();
   }
 
   window.addEventListener('resize', resize);
   resize();
 
-  // Spawn initial particles
-  setInterval(() => { if(!prefersReduced) spawnParticle(Math.random() > 0.85); }, 200);
+  // Stream in data
+  setInterval(() => { if(!prefersReduced) spawnParticle(Math.random() > 0.85); }, 150);
 
   function frame(){
-    // Soft clear for trailing effect
-    ctx.fillStyle = 'rgba(14, 17, 22, 0.15)'; // --bg
+    // Soft clear for blurry trails
+    ctx.fillStyle = 'rgba(14, 17, 22, 0.2)'; 
     ctx.fillRect(0, 0, W(), H());
     
-    const streamY = H() / 2;
+    const highwayCenter = H() / 2;
 
-    // 1. Draw the Residual Stream Highway
-    ctx.beginPath();
-    ctx.moveTo(0, streamY);
-    ctx.lineTo(W() * 0.7, streamY);
-    ctx.strokeStyle = 'rgba(79, 209, 197, 0.15)'; // Faint teal
-    ctx.lineWidth = 4;
-    ctx.stroke();
+    // 1. Draw the Multi-Lane Highway
+    ctx.lineWidth = 1;
+    for(let i = 0; i < numLanes; i++) {
+      const laneY = highwayCenter + (i - numLanes/2 + 0.5) * laneSpacing;
+      ctx.beginPath();
+      ctx.moveTo(0, laneY);
+      ctx.lineTo(W() * 0.65, laneY);
+      ctx.strokeStyle = 'rgba(79, 209, 197, 0.1)'; // Faint teal lanes
+      ctx.stroke();
+    }
 
-    // 2. Draw Transformer Blocks
-    blocks.forEach(b => {
-      ctx.fillStyle = `rgba(38, 43, 52, 0.5)`; // --panel-line
-      ctx.fillRect(b.x - b.width/2, streamY - 40, b.width, 80);
+    // 2. Draw Toll Booths (Heads)
+    heads.forEach(h => {
+      const boothY = highwayCenter + h.yOffset;
       
-      // Block border pulse
-      ctx.strokeStyle = `rgba(201, 162, 39, ${b.active})`;
+      // Booth background
+      ctx.fillStyle = `rgba(23, 27, 34, 0.8)`; // Panel color
+      ctx.fillRect(h.x - h.width/2, boothY - 15, h.width, 30);
+      
+      // Booth border (pulses when active)
+      ctx.strokeStyle = `rgba(201, 162, 39, ${0.2 + h.active})`;
       ctx.lineWidth = 1;
-      ctx.strokeRect(b.x - b.width/2, streamY - 40, b.width, 80);
-      b.active *= 0.9; // decay
+      ctx.strokeRect(h.x - h.width/2, boothY - 15, h.width, 30);
+      
+      // Connection cables to highway
+      ctx.beginPath();
+      ctx.moveTo(h.x, highwayCenter);
+      ctx.lineTo(h.x, boothY + (h.yOffset > 0 ? -15 : 15));
+      ctx.strokeStyle = `rgba(201, 162, 39, ${h.active * 0.5})`;
+      ctx.setLineDash([2, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]); // reset
+
+      h.active *= 0.85; // fast decay
     });
 
     // 3. Update & Draw Particles
@@ -390,60 +410,64 @@
       let p = particles[i];
       p.x += p.vx;
       
-      // Color shift based on progress across the screen
-      p.colorPhase = Math.min(1, p.x / (W() * 0.65));
-      let r = Math.round(79 + (201 - 79) * p.colorPhase);
-      let g = Math.round(209 + (162 - 209) * p.colorPhase);
-      let b = Math.round(197 + (39 - 197) * p.colorPhase);
+      const baseY = highwayCenter + (p.lane - numLanes/2 + 0.5) * laneSpacing;
+      let drawY = baseY;
 
-      // Math for branching in blocks
-      let inBlock = false;
-      blocks.forEach(block => {
-        let dist = Math.abs(p.x - block.x);
-        if (dist < block.width) {
-          inBlock = true;
-          block.active = Math.max(block.active, 0.3); // trigger block glow
+      // Routing Logic (The Off-ramp / On-ramp)
+      if (p.targetHead) {
+        let dx = p.x - p.targetHead.x;
+        let routeZone = 110; // How wide the curve is
+        
+        if (Math.abs(dx) < routeZone) {
+          // Normalize progress through the zone from 0 to 1
+          let progress = (p.x - (p.targetHead.x - routeZone)) / (routeZone * 2);
           
-          // Arch computation pathway (Read from stream -> Compute -> Write to stream)
-          let arch = Math.sin((1 - (dist / block.width)) * Math.PI);
-          p.y = p.baseY + (arch * 30 * p.branchDir);
-        }
-      });
+          // Sine wave creates a perfect smooth curve out and back
+          let curve = Math.sin(progress * Math.PI); 
+          
+          // Apply curve offset
+          drawY = baseY + (curve * p.targetHead.yOffset);
 
-      if (!inBlock) {
-        // Smoothly return to the main stream
-        p.y += (p.baseY - p.y) * 0.1; 
+          // Mark as processed if it hits the center of the booth
+          if (Math.abs(dx) < p.targetHead.width/2) {
+            p.processed = true;
+            p.targetHead.active = Math.max(p.targetHead.active, 0.6); // Light up booth
+          }
+        }
       }
 
-      // Draw particle
+      // Colors: Teal (Noise/Raw) -> Gold (Processed/Signal)
+      let r = p.processed ? 201 : 79;
+      let g = p.processed ? 162 : 209;
+      let b = p.processed ? 39 : 197;
+
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.isMajor ? 3 : 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.isMajor ? 0.8 : 0.4})`;
+      ctx.arc(p.x, drawY, p.isMajor ? 2.5 : 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.isMajor ? p.alpha + 0.4 : p.alpha})`;
       ctx.fill();
 
-      // End of stream logic
-      if (p.x > W() * 0.7) {
+      // Trigger text at the end of the highway
+      if (p.x > W() * 0.65) {
         if (p.isMajor) triggerNextWord();
         particles.splice(i, 1);
       }
     }
 
-    // 4. Draw Generated Text
+    // 4. Draw Generated Text (Centered horizontally in the remaining space)
     ctx.font = "14px 'IBM Plex Mono', monospace";
     ctx.textAlign = "left";
     
-    let textX = W() * 0.75;
-    let textY = streamY - (displayedText.length * 10); // Center vertically
+    let textX = W() * 0.70;
+    let textY = highwayCenter - (displayedText.length * 12); 
 
     displayedText.forEach((item, index) => {
-      // Fade out older words
-      item.alpha = Math.min(1, index / 4);
-      ctx.fillStyle = `rgba(201, 162, 39, ${item.alpha})`; // Gold text
+      item.alpha = Math.min(1, index / 4); // Fade out older words
+      ctx.fillStyle = `rgba(201, 162, 39, ${item.alpha})`; // Gold
       
       if (item.word !== "") {
         ctx.fillText(item.word, textX, textY);
       }
-      textY += 24; // line height
+      textY += 24; 
     });
 
     if (!prefersReduced) requestAnimationFrame(frame);
@@ -452,11 +476,10 @@
   if (!prefersReduced) {
     requestAnimationFrame(frame);
   } else {
-    // Reduced motion fallback
     ctx.clearRect(0,0,W(),H());
     ctx.font = "14px 'IBM Plex Mono', monospace";
     ctx.fillStyle = "#C9A227";
-    ctx.fillText("> model output generating...", W()*0.1, H()/2);
+    ctx.fillText("> hello. i am navraj.", W()*0.1, H()/2);
   }
 </script>
 </body>
