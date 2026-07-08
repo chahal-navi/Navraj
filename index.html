@@ -168,7 +168,7 @@
     
     <!-- PLACEHOLDER FOR YOUR PHOTO -->
     <!-- Add your image file (e.g., navraj.jpg) to your git repo and update the src="" attribute below -->
-    <img src="your-photo.jpg" alt="Navraj Singh" class="profile-pic">
+    <img src="navraj.jpg" alt="Navraj Singh" class="profile-pic">
     
     <h1>Navraj Singh</h1>
     <p class="thesis">I study LLM behaviors, capabilities like evaluation awareness, secret loyalties of LLMs are quite intriguing to me. I use rigorous mathematical techniques to unveil these propensities.</p>
@@ -261,11 +261,9 @@
   <span>Navraj Singh — IISER Mohali</span>
   <span></span>
 </footer>
-
 <script>
-  // Signature element: particles resolve from noise into a structured field
-  // on load, echoing the reverse-denoising / Schrödinger-bridge idea. Runs once,
-  // respects reduced-motion.
+
+  
   const canvas = document.getElementById('noiseCanvas');
   const ctx = canvas.getContext('2d');
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -274,54 +272,181 @@
     canvas.width = canvas.offsetWidth * devicePixelRatio;
     canvas.height = canvas.offsetHeight * devicePixelRatio;
     ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    initSystem();
   }
-  window.addEventListener('resize', resize);
-  resize();
-
-  const N = 140;
+  
   const W = () => canvas.offsetWidth;
   const H = () => canvas.offsetHeight;
 
-  // target: a loose grid of "structured" points (the resolved state)
-  const particles = Array.from({length:N}, (_, i) => {
-    const cols = 14, rows = 10;
-    const col = i % cols, row = Math.floor(i / cols) % rows;
-    const tx = (col + 0.5) / cols * W();
-    const ty = (row + 0.5) / rows * H();
-    return {
-      x: Math.random() * W(),
-      y: Math.random() * H(),
-      tx, ty,
-      r: 1 + Math.random() * 1.6
-    };
-  });
+  let gridSpacing;
+  let cols, rows;
+  let computeNodes = [];
+  let packets = [];
 
-  let t = 0;
-  const duration = prefersReduced ? 1 : 260; // frames
+  function initSystem() {
+    // Define the grid (The Bus)
+    gridSpacing = W() > 600 ? 80 : 50; 
+    cols = Math.floor(W() / gridSpacing) + 2;
+    rows = Math.floor(H() / gridSpacing) + 2;
+    
+    // Designate random grid intersections as Compute Units (CUs)
+    computeNodes = [];
+    for(let i = 0; i < (cols * rows) * 0.15; i++) {
+      computeNodes.push({
+        c: Math.floor(Math.random() * cols),
+        r: Math.floor(Math.random() * rows),
+        pulse: 0
+      });
+    }
+
+    // Initialize Data Packets
+    const numPackets = W() > 600 ? 100 : 40;
+    packets = Array.from({length: numPackets}, () => spawnPacket());
+  }
+
+  function spawnPacket() {
+    // Start at a random grid edge
+    const isHorizontal = Math.random() > 0.5;
+    const c = isHorizontal ? (Math.random() > 0.5 ? 0 : cols) : Math.floor(Math.random() * cols);
+    const r = isHorizontal ? Math.floor(Math.random() * rows) : (Math.random() > 0.5 ? 0 : rows);
+    
+    return {
+      x: c * gridSpacing,
+      y: r * gridSpacing,
+      c: c, r: r,
+      targetC: c, targetR: r,
+      speed: 1.5 + Math.random() * 2,
+      state: 'noise', // 'noise', 'computing', 'signal'
+      computeTimer: 0,
+      alpha: 0
+    };
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
 
   function frame(){
     ctx.clearRect(0,0,W(),H());
-    t = Math.min(t + 1, duration);
-    const p = t / duration;
-    const ease = 1 - Math.pow(1 - p, 3);
+    
+    // 1. Draw the Bus (Circuit Traces)
+    ctx.strokeStyle = 'rgba(38, 43, 52, 0.4)'; // Faint panel-line color
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let i = 0; i <= cols; i++) {
+      ctx.moveTo(i * gridSpacing, 0);
+      ctx.lineTo(i * gridSpacing, H());
+    }
+    for(let j = 0; j <= rows; j++) {
+      ctx.moveTo(0, j * gridSpacing);
+      ctx.lineTo(W(), j * gridSpacing);
+    }
+    ctx.stroke();
 
-    particles.forEach(pt => {
-      const x = pt.x + (pt.tx - pt.x) * ease;
-      const y = pt.y + (pt.ty - pt.y) * ease;
-      const mix = ease; // 0 = noise color, 1 = signal color
-      const r = Math.round(79 + (201-79)*mix);
-      const g = Math.round(209 + (162-209)*mix);
-      const b = Math.round(197 + (39-197)*mix);
-      ctx.beginPath();
-      ctx.arc(x, y, pt.r, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${0.55 + 0.35*mix})`;
-      ctx.fill();
+    // 2. Draw Compute Units
+    computeNodes.forEach(node => {
+      const nx = node.c * gridSpacing;
+      const ny = node.r * gridSpacing;
+      
+      // Node base
+      ctx.fillStyle = '#171B22'; // Panel background
+      ctx.strokeStyle = '#4FD1C5'; // Teal outline
+      ctx.lineWidth = 1;
+      ctx.fillRect(nx - 4, ny - 4, 8, 8);
+      
+      // Node pulse (when processing data)
+      if (node.pulse > 0) {
+        ctx.strokeStyle = `rgba(201, 162, 39, ${node.pulse})`; // Gold pulse
+        ctx.strokeRect(nx - 6 - (1-node.pulse)*4, ny - 6 - (1-node.pulse)*4, 12 + (1-node.pulse)*8, 12 + (1-node.pulse)*8);
+        node.pulse -= 0.05;
+      } else {
+        ctx.strokeRect(nx - 4, ny - 4, 8, 8);
+      }
     });
 
-    if (t < duration) requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-</script>
+    // 3. Update & Draw Packets
+    packets.forEach(p => {
+      // Fade in smoothly
+      if (p.alpha < 1) p.alpha += 0.02;
 
+      const targetX = p.targetC * gridSpacing;
+      const targetY = p.targetR * gridSpacing;
+
+      // Logic for arriving at a node
+      if (Math.abs(p.x - targetX) < p.speed && Math.abs(p.y - targetY) < p.speed) {
+        p.x = targetX;
+        p.y = targetY;
+        p.c = p.targetC;
+        p.r = p.targetR;
+
+        // Check if we hit a compute node while carrying noise
+        const isComputeNode = computeNodes.find(n => n.c === p.c && n.r === p.r);
+        
+        if (isComputeNode && p.state === 'noise' && Math.random() > 0.3) {
+          p.state = 'computing';
+          p.computeTimer = 30 + Math.random() * 40; // stay and process
+          isComputeNode.pulse = 1; // trigger visual pulse
+        } 
+        else if (p.state === 'computing') {
+          p.computeTimer--;
+          if (p.computeTimer <= 0) {
+            p.state = 'signal'; // Processing complete
+          }
+        } 
+        else {
+          // If not computing, pick a new adjacent node to travel to
+          // Keep it moving in mostly the same direction or turn 90 degrees
+          const dirs = [
+            {dc: 1, dr: 0}, {dc: -1, dr: 0}, 
+            {dc: 0, dr: 1}, {dc: 0, dr: -1}
+          ];
+          const dir = dirs[Math.floor(Math.random() * dirs.length)];
+          p.targetC = p.c + dir.dc;
+          p.targetR = p.r + dir.dr;
+
+          // If signal travels off screen, reset to noise
+          if (p.targetC < 0 || p.targetC > cols || p.targetR < 0 || p.targetR > rows) {
+            Object.assign(p, spawnPacket());
+          }
+        }
+      } else {
+        // Move towards target
+        if (p.x < targetX) p.x += p.speed;
+        if (p.x > targetX) p.x -= p.speed;
+        if (p.y < targetY) p.y += p.speed;
+        if (p.y > targetY) p.y -= p.speed;
+      }
+
+      // Draw Packet
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2);
+      
+      // Teal for Noise (unprocessed), Gold for Signal (processed)
+      if (p.state === 'noise') {
+        ctx.fillStyle = `rgba(79, 209, 197, ${p.alpha * 0.7})`;
+      } else if (p.state === 'signal') {
+        ctx.fillStyle = `rgba(201, 162, 39, ${p.alpha})`;
+        // Add a tiny glow to processed signals
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#C9A227';
+      } else {
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`; // White flash while computing
+      }
+      
+      ctx.fill();
+      ctx.shadowBlur = 0; // reset shadow
+    });
+
+    if (!prefersReduced) requestAnimationFrame(frame);
+  }
+
+  if (!prefersReduced) {
+    requestAnimationFrame(frame);
+  } else {
+    // Fallback for reduced motion: draw static grid and a few static packets
+    ctx.clearRect(0,0,W(),H());
+    ctx.fillStyle = 'rgba(79, 209, 197, 0.5)';
+    ctx.fillRect(0,0,W(),H());
+  }
+</script>
 </body>
 </html>
