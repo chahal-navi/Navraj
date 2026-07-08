@@ -40,7 +40,6 @@
     align-items:center;
     overflow:hidden;
     border-bottom:1px solid var(--panel-line);
-    cursor: crosshair; /* hints that the background is interactive */
   }
   #noiseCanvas{
     position:absolute; inset:0; width:100%; height:100%;
@@ -262,8 +261,10 @@
   <span></span>
 </footer>
 <script>
-  // Non-Interactive GPU Tensor Core / Parallel Compute Simulation
-  // Simulates tiled matrix processing, thread blocks (warps), and high-bandwidth memory streaming.
+  // Latent Space Flow Field Simulation
+  // Visualizes a continuous vector field (model latent space) where particles 
+  // (activations) drift slowly. As they align with certain mathematical directions 
+  // (features), they transition from Noise (Teal) to Signal (Gold).
   
   const canvas = document.getElementById('noiseCanvas');
   const ctx = canvas.getContext('2d');
@@ -273,139 +274,82 @@
     canvas.width = canvas.offsetWidth * devicePixelRatio;
     canvas.height = canvas.offsetHeight * devicePixelRatio;
     ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-    initGPU();
+    initSystem();
   }
   
   const W = () => canvas.offsetWidth;
   const H = () => canvas.offsetHeight;
 
-  // GPU Grid Configuration
-  const coreSize = 6;     // Size of individual ALU square
-  const coreGap = 4;      // Space between ALUs
-  const blockSize = 8;    // Number of cores in a "Warp" or Thread Block (e.g., 8x8)
-  
-  let cols, rows;
-  let cores = [];
-  let memoryStreams = [];
+  let particles = [];
+  let time = 0;
 
-  function initGPU() {
-    const totalCellSize = coreSize + coreGap;
-    cols = Math.floor(W() / totalCellSize);
-    rows = Math.floor(H() / totalCellSize);
+  function initSystem() {
+    particles = [];
+    // Calculate number of particles based on screen width for performance
+    const numParticles = W() > 600 ? 450 : 150;
     
-    cores = Array.from({length: cols * rows}, (_, i) => ({
-      c: i % cols,
-      r: Math.floor(i / cols),
-      intensity: 0,       // 0 to 1
-      state: 'idle'       // idle, active (gold), memory (teal)
-    }));
-
-    memoryStreams = [];
-  }
-
-  // Trigger a Thread Block (Warp) to execute simultaneously
-  function executeWarp() {
-    if (cores.length === 0) return;
-    
-    // Pick a random block starting point
-    const startC = Math.floor(Math.random() * (cols - blockSize));
-    const startR = Math.floor(Math.random() * (rows - blockSize));
-    
-    // Width and height of the warp (usually square, sometimes rectangular)
-    const w = Math.random() > 0.5 ? blockSize : blockSize / 2;
-    const h = Math.random() > 0.5 ? blockSize : blockSize / 2;
-
-    for (let r = 0; r < h; r++) {
-      for (let c = 0; c < w; c++) {
-        const idx = (startR + r) * cols + (startC + c);
-        if (cores[idx]) {
-          cores[idx].intensity = 0.8 + Math.random() * 0.2; // Flash bright
-          cores[idx].state = 'active'; // Compute (Gold)
-        }
-      }
+    for(let i = 0; i < numParticles; i++) {
+      particles.push({
+        x: Math.random() * W(),
+        y: Math.random() * H(),
+        vx: 0,
+        vy: 0,
+        size: Math.random() * 1.2 + 0.3 // Very small for subtlety
+      });
     }
-  }
-
-  // Create a high-speed memory data transfer across a row or column
-  function fireMemoryStream() {
-    const isRow = Math.random() > 0.5;
-    const index = Math.floor(Math.random() * (isRow ? rows : cols));
-    
-    memoryStreams.push({
-      isRow,
-      index,
-      pos: 0,
-      speed: 2 + Math.random() * 3, // Very fast
-      length: 10 + Math.random() * 20,
-      life: 1
-    });
   }
 
   window.addEventListener('resize', resize);
   resize();
 
   function frame(){
-    // Dark background fade for trailing effect
-    ctx.fillStyle = 'rgba(14, 17, 22, 0.25)'; // Matches --bg var
+    // Instead of clearing the canvas completely, we draw a very faint dark 
+    // rectangle over it. This creates soft, blurry, fading trails.
+    ctx.fillStyle = 'rgba(14, 17, 22, 0.08)'; // Matches --bg
     ctx.fillRect(0, 0, W(), H());
     
-    // 1. Randomly trigger GPU Operations
-    if (Math.random() < 0.15) executeWarp(); // Parallel compute blocks
-    if (Math.random() < 0.3) fireMemoryStream(); // Memory bus transfers
+    // Slow evolution of the mathematical space
+    time += 0.0015; 
 
-    // 2. Draw memory streams (High-Bandwidth Data)
-    for (let i = memoryStreams.length - 1; i >= 0; i--) {
-      let stream = memoryStreams[i];
-      stream.pos += stream.speed;
+    particles.forEach(p => {
+      // 1. Calculate the Vector Field
+      // We use sine/cosine math to create a continuous, flowing landscape
+      let nx = p.x * 0.002;
+      let ny = p.y * 0.002;
       
-      const cellSize = coreSize + coreGap;
-      ctx.fillStyle = `rgba(79, 209, 197, ${0.4 * stream.life})`; // Teal noise color
+      // The angle determines which direction the particle is pushed
+      let angle = (Math.sin(nx + time) + Math.cos(ny - time)) * Math.PI * 2;
       
-      if (stream.isRow) {
-        ctx.fillRect(stream.pos * cellSize, stream.index * cellSize, stream.length * cellSize, coreSize);
-      } else {
-        ctx.fillRect(stream.index * cellSize, stream.pos * cellSize, coreSize, stream.length * cellSize);
-      }
+      // 2. Move Particle (Incredibly slowly)
+      let speed = 0.35;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      
+      p.x += p.vx;
+      p.y += p.vy;
 
-      // Briefly light up underlying cores as memory passes over
-      if (Math.floor(stream.pos) < (stream.isRow ? cols : rows)) {
-        let currentIdx = stream.isRow 
-            ? (stream.index * cols) + Math.floor(stream.pos) 
-            : (Math.floor(stream.pos) * cols) + stream.index;
-            
-        if (cores[currentIdx] && cores[currentIdx].intensity < 0.3) {
-            cores[currentIdx].intensity = 0.4;
-            cores[currentIdx].state = 'memory';
-        }
-      }
+      // Wrap around the screen seamlessly
+      if(p.x < 0) p.x = W();
+      if(p.x > W()) p.x = 0;
+      if(p.y < 0) p.y = H();
+      if(p.y > H()) p.y = 0;
 
-      if (stream.pos > (stream.isRow ? cols : rows) + stream.length) {
-        memoryStreams.splice(i, 1);
-      }
-    }
+      // 3. Color mapping (Feature Alignment)
+      // Normalize the angle to a 0 to 1 scale
+      let normAngle = Math.abs((angle % Math.PI) / Math.PI);
+      
+      // Smoothly mix colors based on their direction of travel
+      // Teal (Noise): 79, 209, 197 | Gold (Signal): 201, 162, 39
+      let r = Math.round(79 + (201 - 79) * normAngle);
+      let g = Math.round(209 + (162 - 209) * normAngle);
+      let b = Math.round(197 + (39 - 197) * normAngle);
 
-    // 3. Draw GPU Cores
-    const totalCellSize = coreSize + coreGap;
-    cores.forEach(core => {
-      if (core.intensity <= 0.01) return; // Skip drawing totally dark cores to save GPU
+      // Keep opacity extremely low (0.3) for readability
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
       
-      const x = core.c * totalCellSize;
-      const y = core.r * totalCellSize;
-      
-      let r, g, b;
-      if (core.state === 'active') {
-        // Gold / Compute Signal (#C9A227)
-        r = 201; g = 162; b = 39;
-      } else {
-        // Teal / Memory Noise (#4FD1C5)
-        r = 79; g = 209; b = 197;
-      }
-
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${core.intensity * 0.6})`;
-      ctx.fillRect(x, y, coreSize, coreSize);
-      
-      // Decay the intensity (cool down)
-      core.intensity *= 0.88; 
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
     });
 
     if (!prefersReduced) requestAnimationFrame(frame);
@@ -414,14 +358,10 @@
   if (!prefersReduced) {
     requestAnimationFrame(frame);
   } else {
-    // Fallback for reduced motion: draw a static matrix representation
+    // Fallback for reduced motion: draw a static, faint cloud representation
     ctx.clearRect(0,0,W(),H());
-    ctx.fillStyle = 'rgba(79, 209, 197, 0.1)';
-    for(let r=0; r<rows; r+=2) {
-      for(let c=0; c<cols; c+=2) {
-        ctx.fillRect(c*(coreSize+coreGap), r*(coreSize+coreGap), coreSize, coreSize);
-      }
-    }
+    ctx.fillStyle = 'rgba(79, 209, 197, 0.05)';
+    ctx.fillRect(0,0,W(),H());
   }
 </script>
 </body>
