@@ -163,7 +163,7 @@
 <header class="hero" id="hero-section">
   <canvas id="noiseCanvas" aria-hidden="true"></canvas>
   <div class="wrap hero-inner">
-    <div class="eyebrow">mechanistic interpretability — IISER Mohali</div>
+    <div class="eyebrow">Technical AI Safety — BS-MS Physics — IISER Mohali</div>
     
     <!-- PLACEHOLDER FOR YOUR PHOTO -->
     <!-- Add your image file (e.g., navraj.jpg) to your git repo and update the src="" attribute below -->
@@ -260,10 +260,10 @@
   <span></span>
 </footer>
 <script>
-  // Transformer Highway (Residual Stream) Simulation
-  // Multi-lane highway where activations (particles) are routed into 
-  // "Toll Booths" (Attention/MLP heads) for processing, turn gold, 
-  // and merge back into the main stream.
+  // Latent Circuit Constellation Simulation
+  // Visualizes a network of activations (nodes). As they drift, they form 
+  // temporary mathematical connections. Periodically, a "Valid Circuit" 
+  // is discovered, highlighting a specific subgraph in Gold.
   
   const canvas = document.getElementById('noiseCanvas');
   const ctx = canvas.getContext('2d');
@@ -279,196 +279,130 @@
   const W = () => canvas.offsetWidth;
   const H = () => canvas.offsetHeight;
 
-  let particles = [];
-  let heads = [];
-  let displayedText = [];
-  
-  // Custom Personal Sentences
-  const sentences = [
-    "hello.",
-    "i am navraj.",
-    "welcome to my digital space.",
-    "i study neural networks.",
-    "i analyze hidden behaviors.",
-    "let's map the latent space."
-  ];
-  let sentenceIdx = 0;
-  let wordIdx = 0;
-
-  // Highway Settings
-  const numLanes = 6;
-  const laneSpacing = 14;
+  let nodes = [];
+  const connectionDistance = 130; 
 
   function initSystem() {
-    particles = [];
-    displayedText = [];
+    nodes = [];
+    const numNodes = W() > 600 ? 120 : 60; // Keep count manageable for performance
     
-    // Define Toll Booths (Attention Heads) positioned above and below the highway
-    const numHeads = W() > 600 ? 4 : 2;
-    const startX = W() * 0.15;
-    const endX = W() * 0.60; 
-    const spacing = (endX - startX) / numHeads;
-
-    heads = [];
-    for(let i = 0; i < numHeads; i++) {
-      // Alternate placing them above and below the highway
-      const isTop = i % 2 === 0;
-      heads.push({
-        x: startX + i * spacing + spacing/2,
-        yOffset: isTop ? -75 : 75, 
-        width: 45,
-        active: 0
+    for(let i = 0; i < numNodes; i++) {
+      nodes.push({
+        id: i,
+        x: Math.random() * W(),
+        y: Math.random() * H(),
+        vx: (Math.random() - 0.5) * 0.4, // Very slow drift
+        vy: (Math.random() - 0.5) * 0.4,
+        highlight: 0 // 0 to 1 (decaying gold glow)
       });
     }
   }
 
-  function spawnParticle(isMajor = false) {
-    // Pick a random lane
-    const lane = Math.floor(Math.random() * numLanes);
+  // Trigger a "Circuit Discovery"
+  function discoverCircuit() {
+    if (nodes.length === 0) return;
     
-    particles.push({
-      x: 0,
-      lane: lane,
-      vx: 1.5 + Math.random() * 2,
-      isMajor: isMajor,
-      processed: false,
-      // 50% chance to stay on highway, 50% chance to route to a random toll booth
-      targetHead: Math.random() > 0.5 ? heads[Math.floor(Math.random() * heads.length)] : null,
-      alpha: Math.random() * 0.5 + 0.3
+    // Pick a random starting node
+    let startNode = nodes[Math.floor(Math.random() * nodes.length)];
+    startNode.highlight = 1;
+
+    // Find its immediate neighbors and highlight them to form a circuit
+    let circuitSize = 0;
+    nodes.forEach(n => {
+      if (n.id !== startNode.id && circuitSize < 6) { // Max 6 nodes in a circuit
+        let dx = n.x - startNode.x;
+        let dy = n.y - startNode.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < connectionDistance * 1.5) {
+          n.highlight = 0.9 - (Math.random() * 0.2);
+          circuitSize++;
+        }
+      }
     });
-  }
-
-  function triggerNextWord() {
-    let currentWords = sentences[sentenceIdx].split(" ");
-    
-    if (wordIdx < currentWords.length) {
-      displayedText.push({
-        word: currentWords[wordIdx],
-        alpha: 1
-      });
-      wordIdx++;
-    } else {
-      sentenceIdx = (sentenceIdx + 1) % sentences.length;
-      wordIdx = 0;
-      displayedText.push({ word: "", alpha: 1 }); 
-    }
-
-    if (displayedText.length > 8) displayedText.shift();
   }
 
   window.addEventListener('resize', resize);
   resize();
 
-  // Stream in data
-  setInterval(() => { if(!prefersReduced) spawnParticle(Math.random() > 0.85); }, 150);
+  // Randomly discover circuits every 2-4 seconds
+  setInterval(() => {
+    if(!prefersReduced && Math.random() > 0.3) discoverCircuit();
+  }, 3000);
 
   function frame(){
-    // Soft clear for blurry trails
-    ctx.fillStyle = 'rgba(14, 17, 22, 0.2)'; 
-    ctx.fillRect(0, 0, W(), H());
-    
-    const highwayCenter = H() / 2;
+    // Clear canvas entirely for sharp, clean lines
+    ctx.clearRect(0, 0, W(), H());
 
-    // 1. Draw the Multi-Lane Highway
-    ctx.lineWidth = 1;
-    for(let i = 0; i < numLanes; i++) {
-      const laneY = highwayCenter + (i - numLanes/2 + 0.5) * laneSpacing;
-      ctx.beginPath();
-      ctx.moveTo(0, laneY);
-      ctx.lineTo(W() * 0.65, laneY);
-      ctx.strokeStyle = 'rgba(79, 209, 197, 0.1)'; // Faint teal lanes
-      ctx.stroke();
-    }
+    // 1. Update positions
+    nodes.forEach(n => {
+      n.x += n.vx;
+      n.y += n.vy;
 
-    // 2. Draw Toll Booths (Heads)
-    heads.forEach(h => {
-      const boothY = highwayCenter + h.yOffset;
-      
-      // Booth background
-      ctx.fillStyle = `rgba(23, 27, 34, 0.8)`; // Panel color
-      ctx.fillRect(h.x - h.width/2, boothY - 15, h.width, 30);
-      
-      // Booth border (pulses when active)
-      ctx.strokeStyle = `rgba(201, 162, 39, ${0.2 + h.active})`;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(h.x - h.width/2, boothY - 15, h.width, 30);
-      
-      // Connection cables to highway
-      ctx.beginPath();
-      ctx.moveTo(h.x, highwayCenter);
-      ctx.lineTo(h.x, boothY + (h.yOffset > 0 ? -15 : 15));
-      ctx.strokeStyle = `rgba(201, 162, 39, ${h.active * 0.5})`;
-      ctx.setLineDash([2, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]); // reset
+      // Smooth screen wrap-around
+      if(n.x < -connectionDistance) n.x = W() + connectionDistance;
+      if(n.x > W() + connectionDistance) n.x = -connectionDistance;
+      if(n.y < -connectionDistance) n.y = H() + connectionDistance;
+      if(n.y > H() + connectionDistance) n.y = -connectionDistance;
 
-      h.active *= 0.85; // fast decay
+      // Decay the circuit highlight
+      if (n.highlight > 0) n.highlight *= 0.98;
     });
 
-    // 3. Update & Draw Particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-      let p = particles[i];
-      p.x += p.vx;
-      
-      const baseY = highwayCenter + (p.lane - numLanes/2 + 0.5) * laneSpacing;
-      let drawY = baseY;
-
-      // Routing Logic (The Off-ramp / On-ramp)
-      if (p.targetHead) {
-        let dx = p.x - p.targetHead.x;
-        let routeZone = 110; // How wide the curve is
+    // 2. Draw Edges (Connections)
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let n1 = nodes[i];
+        let n2 = nodes[j];
         
-        if (Math.abs(dx) < routeZone) {
-          // Normalize progress through the zone from 0 to 1
-          let progress = (p.x - (p.targetHead.x - routeZone)) / (routeZone * 2);
-          
-          // Sine wave creates a perfect smooth curve out and back
-          let curve = Math.sin(progress * Math.PI); 
-          
-          // Apply curve offset
-          drawY = baseY + (curve * p.targetHead.yOffset);
+        let dx = n1.x - n2.x;
+        let dy = n1.y - n2.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
 
-          // Mark as processed if it hits the center of the booth
-          if (Math.abs(dx) < p.targetHead.width/2) {
-            p.processed = true;
-            p.targetHead.active = Math.max(p.targetHead.active, 0.6); // Light up booth
+        if (dist < connectionDistance) {
+          // Opacity fades as they get further apart
+          let baseOpacity = 1 - (dist / connectionDistance);
+          
+          // If both nodes are part of a discovered circuit, the edge glows gold
+          let sharedHighlight = Math.min(n1.highlight, n2.highlight);
+          
+          if (sharedHighlight > 0.1) {
+            // Gold edge
+            ctx.strokeStyle = `rgba(201, 162, 39, ${baseOpacity * sharedHighlight * 0.8})`;
+            ctx.lineWidth = 1.5;
+          } else {
+            // Faint Teal edge
+            ctx.strokeStyle = `rgba(79, 209, 197, ${baseOpacity * 0.15})`;
+            ctx.lineWidth = 0.8;
           }
+
+          ctx.beginPath();
+          ctx.moveTo(n1.x, n1.y);
+          ctx.lineTo(n2.x, n2.y);
+          ctx.stroke();
         }
       }
-
-      // Colors: Teal (Noise/Raw) -> Gold (Processed/Signal)
-      let r = p.processed ? 201 : 79;
-      let g = p.processed ? 162 : 209;
-      let b = p.processed ? 39 : 197;
-
-      ctx.beginPath();
-      ctx.arc(p.x, drawY, p.isMajor ? 2.5 : 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.isMajor ? p.alpha + 0.4 : p.alpha})`;
-      ctx.fill();
-
-      // Trigger text at the end of the highway
-      if (p.x > W() * 0.65) {
-        if (p.isMajor) triggerNextWord();
-        particles.splice(i, 1);
-      }
     }
 
-    // 4. Draw Generated Text (Centered horizontally in the remaining space)
-    ctx.font = "14px 'IBM Plex Mono', monospace";
-    ctx.textAlign = "left";
-    
-    let textX = W() * 0.70;
-    let textY = highwayCenter - (displayedText.length * 12); 
-
-    displayedText.forEach((item, index) => {
-      item.alpha = Math.min(1, index / 4); // Fade out older words
-      ctx.fillStyle = `rgba(201, 162, 39, ${item.alpha})`; // Gold
+    // 3. Draw Nodes
+    nodes.forEach(n => {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 1.5 + (n.highlight * 1.5), 0, Math.PI * 2);
       
-      if (item.word !== "") {
-        ctx.fillText(item.word, textX, textY);
+      if (n.highlight > 0.1) {
+        ctx.fillStyle = `rgba(201, 162, 39, ${0.4 + n.highlight * 0.6})`;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#C9A227';
+      } else {
+        ctx.fillStyle = `rgba(79, 209, 197, 0.3)`;
+        ctx.shadowBlur = 0;
       }
-      textY += 24; 
+      
+      ctx.fill();
     });
+
+    // Reset shadow for next frame
+    ctx.shadowBlur = 0;
 
     if (!prefersReduced) requestAnimationFrame(frame);
   }
@@ -476,10 +410,10 @@
   if (!prefersReduced) {
     requestAnimationFrame(frame);
   } else {
+    // Reduced motion fallback
     ctx.clearRect(0,0,W(),H());
-    ctx.font = "14px 'IBM Plex Mono', monospace";
-    ctx.fillStyle = "#C9A227";
-    ctx.fillText("> hello. i am navraj.", W()*0.1, H()/2);
+    ctx.fillStyle = 'rgba(79, 209, 197, 0.05)';
+    ctx.fillRect(0,0,W(),H());
   }
 </script>
 </body>
