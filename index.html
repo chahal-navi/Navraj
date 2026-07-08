@@ -168,7 +168,7 @@
     
     <!-- PLACEHOLDER FOR YOUR PHOTO -->
     <!-- Add your image file (e.g., navraj.jpg) to your git repo and update the src="" attribute below -->
-    <img src="navraj.jpg" alt="Navraj Singh" class="profile-pic">
+    <img src="navraj.jpeg" alt="Navraj Singh" class="profile-pic">
     
     <h1>Navraj Singh</h1>
     <p class="thesis">I study LLM behaviors, capabilities like evaluation awareness, secret loyalties of LLMs are quite intriguing to me. I use rigorous mathematical techniques to unveil these propensities.</p>
@@ -262,7 +262,8 @@
   <span></span>
 </footer>
 <script>
-
+  // Non-Interactive GPU Tensor Core / Parallel Compute Simulation
+  // Simulates tiled matrix processing, thread blocks (warps), and high-bandwidth memory streaming.
   
   const canvas = document.getElementById('noiseCanvas');
   const ctx = canvas.getContext('2d');
@@ -272,168 +273,139 @@
     canvas.width = canvas.offsetWidth * devicePixelRatio;
     canvas.height = canvas.offsetHeight * devicePixelRatio;
     ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-    initSystem();
+    initGPU();
   }
   
   const W = () => canvas.offsetWidth;
   const H = () => canvas.offsetHeight;
 
-  let gridSpacing;
+  // GPU Grid Configuration
+  const coreSize = 6;     // Size of individual ALU square
+  const coreGap = 4;      // Space between ALUs
+  const blockSize = 8;    // Number of cores in a "Warp" or Thread Block (e.g., 8x8)
+  
   let cols, rows;
-  let computeNodes = [];
-  let packets = [];
+  let cores = [];
+  let memoryStreams = [];
 
-  function initSystem() {
-    // Define the grid (The Bus)
-    gridSpacing = W() > 600 ? 80 : 50; 
-    cols = Math.floor(W() / gridSpacing) + 2;
-    rows = Math.floor(H() / gridSpacing) + 2;
+  function initGPU() {
+    const totalCellSize = coreSize + coreGap;
+    cols = Math.floor(W() / totalCellSize);
+    rows = Math.floor(H() / totalCellSize);
     
-    // Designate random grid intersections as Compute Units (CUs)
-    computeNodes = [];
-    for(let i = 0; i < (cols * rows) * 0.15; i++) {
-      computeNodes.push({
-        c: Math.floor(Math.random() * cols),
-        r: Math.floor(Math.random() * rows),
-        pulse: 0
-      });
-    }
+    cores = Array.from({length: cols * rows}, (_, i) => ({
+      c: i % cols,
+      r: Math.floor(i / cols),
+      intensity: 0,       // 0 to 1
+      state: 'idle'       // idle, active (gold), memory (teal)
+    }));
 
-    // Initialize Data Packets
-    const numPackets = W() > 600 ? 100 : 40;
-    packets = Array.from({length: numPackets}, () => spawnPacket());
+    memoryStreams = [];
   }
 
-  function spawnPacket() {
-    // Start at a random grid edge
-    const isHorizontal = Math.random() > 0.5;
-    const c = isHorizontal ? (Math.random() > 0.5 ? 0 : cols) : Math.floor(Math.random() * cols);
-    const r = isHorizontal ? Math.floor(Math.random() * rows) : (Math.random() > 0.5 ? 0 : rows);
+  // Trigger a Thread Block (Warp) to execute simultaneously
+  function executeWarp() {
+    if (cores.length === 0) return;
     
-    return {
-      x: c * gridSpacing,
-      y: r * gridSpacing,
-      c: c, r: r,
-      targetC: c, targetR: r,
-      speed: 1.5 + Math.random() * 2,
-      state: 'noise', // 'noise', 'computing', 'signal'
-      computeTimer: 0,
-      alpha: 0
-    };
+    // Pick a random block starting point
+    const startC = Math.floor(Math.random() * (cols - blockSize));
+    const startR = Math.floor(Math.random() * (rows - blockSize));
+    
+    // Width and height of the warp (usually square, sometimes rectangular)
+    const w = Math.random() > 0.5 ? blockSize : blockSize / 2;
+    const h = Math.random() > 0.5 ? blockSize : blockSize / 2;
+
+    for (let r = 0; r < h; r++) {
+      for (let c = 0; c < w; c++) {
+        const idx = (startR + r) * cols + (startC + c);
+        if (cores[idx]) {
+          cores[idx].intensity = 0.8 + Math.random() * 0.2; // Flash bright
+          cores[idx].state = 'active'; // Compute (Gold)
+        }
+      }
+    }
+  }
+
+  // Create a high-speed memory data transfer across a row or column
+  function fireMemoryStream() {
+    const isRow = Math.random() > 0.5;
+    const index = Math.floor(Math.random() * (isRow ? rows : cols));
+    
+    memoryStreams.push({
+      isRow,
+      index,
+      pos: 0,
+      speed: 2 + Math.random() * 3, // Very fast
+      length: 10 + Math.random() * 20,
+      life: 1
+    });
   }
 
   window.addEventListener('resize', resize);
   resize();
 
   function frame(){
-    ctx.clearRect(0,0,W(),H());
+    // Dark background fade for trailing effect
+    ctx.fillStyle = 'rgba(14, 17, 22, 0.25)'; // Matches --bg var
+    ctx.fillRect(0, 0, W(), H());
     
-    // 1. Draw the Bus (Circuit Traces)
-    ctx.strokeStyle = 'rgba(38, 43, 52, 0.4)'; // Faint panel-line color
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for(let i = 0; i <= cols; i++) {
-      ctx.moveTo(i * gridSpacing, 0);
-      ctx.lineTo(i * gridSpacing, H());
-    }
-    for(let j = 0; j <= rows; j++) {
-      ctx.moveTo(0, j * gridSpacing);
-      ctx.lineTo(W(), j * gridSpacing);
-    }
-    ctx.stroke();
+    // 1. Randomly trigger GPU Operations
+    if (Math.random() < 0.15) executeWarp(); // Parallel compute blocks
+    if (Math.random() < 0.3) fireMemoryStream(); // Memory bus transfers
 
-    // 2. Draw Compute Units
-    computeNodes.forEach(node => {
-      const nx = node.c * gridSpacing;
-      const ny = node.r * gridSpacing;
+    // 2. Draw memory streams (High-Bandwidth Data)
+    for (let i = memoryStreams.length - 1; i >= 0; i--) {
+      let stream = memoryStreams[i];
+      stream.pos += stream.speed;
       
-      // Node base
-      ctx.fillStyle = '#171B22'; // Panel background
-      ctx.strokeStyle = '#4FD1C5'; // Teal outline
-      ctx.lineWidth = 1;
-      ctx.fillRect(nx - 4, ny - 4, 8, 8);
+      const cellSize = coreSize + coreGap;
+      ctx.fillStyle = `rgba(79, 209, 197, ${0.4 * stream.life})`; // Teal noise color
       
-      // Node pulse (when processing data)
-      if (node.pulse > 0) {
-        ctx.strokeStyle = `rgba(201, 162, 39, ${node.pulse})`; // Gold pulse
-        ctx.strokeRect(nx - 6 - (1-node.pulse)*4, ny - 6 - (1-node.pulse)*4, 12 + (1-node.pulse)*8, 12 + (1-node.pulse)*8);
-        node.pulse -= 0.05;
+      if (stream.isRow) {
+        ctx.fillRect(stream.pos * cellSize, stream.index * cellSize, stream.length * cellSize, coreSize);
       } else {
-        ctx.strokeRect(nx - 4, ny - 4, 8, 8);
+        ctx.fillRect(stream.index * cellSize, stream.pos * cellSize, coreSize, stream.length * cellSize);
       }
-    });
 
-    // 3. Update & Draw Packets
-    packets.forEach(p => {
-      // Fade in smoothly
-      if (p.alpha < 1) p.alpha += 0.02;
-
-      const targetX = p.targetC * gridSpacing;
-      const targetY = p.targetR * gridSpacing;
-
-      // Logic for arriving at a node
-      if (Math.abs(p.x - targetX) < p.speed && Math.abs(p.y - targetY) < p.speed) {
-        p.x = targetX;
-        p.y = targetY;
-        p.c = p.targetC;
-        p.r = p.targetR;
-
-        // Check if we hit a compute node while carrying noise
-        const isComputeNode = computeNodes.find(n => n.c === p.c && n.r === p.r);
-        
-        if (isComputeNode && p.state === 'noise' && Math.random() > 0.3) {
-          p.state = 'computing';
-          p.computeTimer = 30 + Math.random() * 40; // stay and process
-          isComputeNode.pulse = 1; // trigger visual pulse
-        } 
-        else if (p.state === 'computing') {
-          p.computeTimer--;
-          if (p.computeTimer <= 0) {
-            p.state = 'signal'; // Processing complete
-          }
-        } 
-        else {
-          // If not computing, pick a new adjacent node to travel to
-          // Keep it moving in mostly the same direction or turn 90 degrees
-          const dirs = [
-            {dc: 1, dr: 0}, {dc: -1, dr: 0}, 
-            {dc: 0, dr: 1}, {dc: 0, dr: -1}
-          ];
-          const dir = dirs[Math.floor(Math.random() * dirs.length)];
-          p.targetC = p.c + dir.dc;
-          p.targetR = p.r + dir.dr;
-
-          // If signal travels off screen, reset to noise
-          if (p.targetC < 0 || p.targetC > cols || p.targetR < 0 || p.targetR > rows) {
-            Object.assign(p, spawnPacket());
-          }
+      // Briefly light up underlying cores as memory passes over
+      if (Math.floor(stream.pos) < (stream.isRow ? cols : rows)) {
+        let currentIdx = stream.isRow 
+            ? (stream.index * cols) + Math.floor(stream.pos) 
+            : (Math.floor(stream.pos) * cols) + stream.index;
+            
+        if (cores[currentIdx] && cores[currentIdx].intensity < 0.3) {
+            cores[currentIdx].intensity = 0.4;
+            cores[currentIdx].state = 'memory';
         }
-      } else {
-        // Move towards target
-        if (p.x < targetX) p.x += p.speed;
-        if (p.x > targetX) p.x -= p.speed;
-        if (p.y < targetY) p.y += p.speed;
-        if (p.y > targetY) p.y -= p.speed;
       }
 
-      // Draw Packet
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2);
-      
-      // Teal for Noise (unprocessed), Gold for Signal (processed)
-      if (p.state === 'noise') {
-        ctx.fillStyle = `rgba(79, 209, 197, ${p.alpha * 0.7})`;
-      } else if (p.state === 'signal') {
-        ctx.fillStyle = `rgba(201, 162, 39, ${p.alpha})`;
-        // Add a tiny glow to processed signals
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = '#C9A227';
-      } else {
-        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`; // White flash while computing
+      if (stream.pos > (stream.isRow ? cols : rows) + stream.length) {
+        memoryStreams.splice(i, 1);
       }
+    }
+
+    // 3. Draw GPU Cores
+    const totalCellSize = coreSize + coreGap;
+    cores.forEach(core => {
+      if (core.intensity <= 0.01) return; // Skip drawing totally dark cores to save GPU
       
-      ctx.fill();
-      ctx.shadowBlur = 0; // reset shadow
+      const x = core.c * totalCellSize;
+      const y = core.r * totalCellSize;
+      
+      let r, g, b;
+      if (core.state === 'active') {
+        // Gold / Compute Signal (#C9A227)
+        r = 201; g = 162; b = 39;
+      } else {
+        // Teal / Memory Noise (#4FD1C5)
+        r = 79; g = 209; b = 197;
+      }
+
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${core.intensity * 0.6})`;
+      ctx.fillRect(x, y, coreSize, coreSize);
+      
+      // Decay the intensity (cool down)
+      core.intensity *= 0.88; 
     });
 
     if (!prefersReduced) requestAnimationFrame(frame);
@@ -442,10 +414,14 @@
   if (!prefersReduced) {
     requestAnimationFrame(frame);
   } else {
-    // Fallback for reduced motion: draw static grid and a few static packets
+    // Fallback for reduced motion: draw a static matrix representation
     ctx.clearRect(0,0,W(),H());
-    ctx.fillStyle = 'rgba(79, 209, 197, 0.5)';
-    ctx.fillRect(0,0,W(),H());
+    ctx.fillStyle = 'rgba(79, 209, 197, 0.1)';
+    for(let r=0; r<rows; r+=2) {
+      for(let c=0; c<cols; c+=2) {
+        ctx.fillRect(c*(coreSize+coreGap), r*(coreSize+coreGap), coreSize, coreSize);
+      }
+    }
   }
 </script>
 </body>
