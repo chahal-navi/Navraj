@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Navraj Singh — Mechanistic Interpretability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1116;
+    --panel:#171B22;
+    --panel-line:#262B34;
+    --ink:#E8E6E1;
+    --muted:#8B92A0;
+    --signal:#C9A227;   /* structure / resolved signal */
+    --noise:#4FD1C5;    /* noise / latent */
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.6;
+  }
+  ::selection{ background:var(--signal); color:#0E1116; }
+  a{ color:var(--signal); text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--noise); outline-offset:3px; }
+
+  .wrap{ max-width:880px; margin:0 auto; padding:0 28px; }
+
+  header.hero{
+    position:relative;
+    min-height:78vh;
+    display:flex;
+    align-items:center;
+    overflow:hidden;
+    border-bottom:1px solid var(--panel-line);
+  }
+  #noiseCanvas{
+    position:absolute; inset:0; width:100%; height:100%;
+    opacity:0.9;
+  }
+  .hero-inner{ position:relative; z-index:2; padding:80px 0; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--noise);
+    letter-spacing:0.06em;
+    margin-bottom:18px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(40px, 6vw, 68px);
+    line-height:1.05;
+    margin:0 0 22px;
+    max-width:11ch;
+  }
+  .thesis{
+    font-size:18px;
+    color:var(--muted);
+    max-width:52ch;
+    margin:0 0 30px;
+  }
+  .hero-links{ display:flex; gap:22px; flex-wrap:wrap; font-family:'IBM Plex Mono', monospace; font-size:14px; }
+
+  section{ padding:64px 0; border-bottom:1px solid var(--panel-line); }
+  section:last-of-type{ border-bottom:none; }
+
+  .fig-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--noise);
+    margin-bottom:10px;
+    display:block;
+  }
+  h2{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:28px;
+    margin:0 0 20px;
+  }
+  .lede{ color:var(--ink); max-width:66ch; font-size:16px; }
+  .lede.muted{ color:var(--muted); }
+
+  .work-item{
+    padding:26px 0;
+    border-top:1px solid var(--panel-line);
+    display:grid;
+    grid-template-columns:100px 1fr;
+    gap:24px;
+  }
+  .work-item:first-of-type{ border-top:none; }
+  .work-meta{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted); }
+  .work-title{ font-size:17px; font-weight:500; margin:0 0 8px; }
+  .work-desc{ color:var(--muted); font-size:15px; max-width:60ch; }
+  .work-tags{ margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--noise); }
+
+  @media (max-width:640px){
+    .work-item{ grid-template-columns:1fr; gap:8px; }
+  }
+
+  .other-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px 40px;
+    font-size:14px;
+  }
+  .other-grid div{ padding:10px 0; border-top:1px solid var(--panel-line); }
+  @media (max-width:640px){ .other-grid{ grid-template-columns:1fr; } }
+  .other-role{ color:var(--ink); font-weight:500; }
+  .other-sup{ color:var(--muted); font-size:13px; }
+
+  footer{
+    padding:50px 0 70px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  footer a{ color:var(--ink); }
+
+  .skip{ position:absolute; left:-9999px; }
+  .skip:focus{ left:16px; top:16px; background:var(--panel); padding:10px 14px; z-index:10; }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="hero">
+  <canvas id="noiseCanvas" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <div class="eyebrow">mechanistic interpretability — IISER Mohali</div>
+    <h1>Navraj Singh</h1>
+    <p class="thesis">I study how language models come to hold hidden behavioral conditioning — training signals that shape a model's behavior without appearing anywhere in its outputs — and how to make that conditioning visible in the residual stream.</p>
+    <div class="hero-links">
+      <a href="mailto:ms22110@iisermohali.ac.in">email</a>
+      <a href="#">github</a>
+      <a href="#">arXiv</a>
+      <a href="#">CV (PDF)</a>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+
+  <section id="focus">
+    <span class="fig-label">fig. 0 — current focus</span>
+    <h2>What I'm working on</h2>
+    <p class="lede">My MS thesis builds mechanistic evaluation tools for diffusion models, using the Schrödinger bridging formalism to track how a generation's trajectory — from Gaussian noise to structured output — stabilizes at specific layers. In parallel, I work on detecting hidden loyalties and evaluation-awareness in LLMs: training signals a model has learned but doesn't surface, and the probing methods that can pull them out of the residual stream anyway.</p>
+  </section>
+
+  <section id="work">
+    <span class="fig-label">fig. 1 — selected work</span>
+    <h2>Research</h2>
+
+    <div class="work-item">
+      <div class="work-meta">2026<br>arXiv · KDD</div>
+      <div>
+        <p class="work-title">Evaluation Awareness in Large Language Models</p>
+        <p class="work-desc">Mapped how evaluation awareness scales across compact architectures (Gemma 3, Phi-3, Llama-3 8B) using CoT analysis, representation probing, and Integrated Gradients attribution. Built a dual-pathway mitigation pipeline — prompt sanitization plus activation counter-steering — reaching a 70.58% average behavioral flip rate across 200 high-confidence prompts.</p>
+        <p class="work-tags">probing · activation patching · integrated gradients</p>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <div class="work-meta">2026<br>BlueDot AI Safety</div>
+      <div>
+        <p class="work-title">Secret Loyalties in a Constitutional AI Pipeline</p>
+        <p class="work-desc">Mechanistic evaluation and vulnerability probing of a proprietary loyalty model organism, extending an SL-CAI → RL-CAI setup with white-box linear probing of residual stream activations to detect hidden alignment failures.</p>
+        <p class="work-tags">linear probing · residual stream · CAI</p>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <div class="work-meta">2025<br>Apart Research</div>
+      <div>
+        <p class="work-title">VEIL: Mechanistic Upstream Guardrails for Generative Biology</p>
+        <p class="work-desc">Trained an L1-regularized linear probe on ProteinMPNN decoder latents to flag structural markers of pathogenic risk, isolating causal features independent of sequence length. Surfaced polysemanticity where safety vectors conflated structural threat with structural rigidity, tested out-of-distribution on ricin.</p>
+        <p class="work-tags">sparse probing · biosecurity · generalization</p>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <div class="work-meta">2026 →<br>MS Thesis</div>
+      <div>
+        <p class="work-title">Interpretability Frameworks for Diffusion Models</p>
+        <p class="work-desc">Building mechanistic tools to analyze feature formation during reverse denoising, applying the Schrödinger bridging framework to trace multi-step trajectories from noise to structured output and locate where early generation choices lock in.</p>
+        <p class="work-tags">diffusion · Schrödinger bridges · feature formation</p>
+      </div>
+    </div>
+
+  </section>
+
+  <section id="other">
+    <span class="fig-label">fig. 2 — other technical work</span>
+    <h2>Also worked on</h2>
+    <div class="other-grid">
+      <div><span class="other-role">Fully Homomorphic Encryption in AI (CKKS)</span><br><span class="other-sup">Encrypted neural network inference, noise budget management</span></div>
+      <div><span class="other-role">Valid Circuit Detection, Hexa-board PCB</span><br><span class="other-sup">SSD object detection, ResNet-50 / ResNet-18</span></div>
+      <div><span class="other-role">Computational Option Pricing</span><br><span class="other-sup">C++ stochastic algorithms, continuous-time pricing</span></div>
+      <div><span class="other-role">Grain Size Distribution via Mask-RCNN</span><br><span class="other-sup">Drone telemetry segmentation</span></div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <span class="fig-label">fig. 3 — get in touch</span>
+    <h2>Contact</h2>
+    <p class="lede muted">Reach out about interpretability research, fellowships, or collaboration.</p>
+    <div class="hero-links" style="margin-top:20px;">
+      <a href="mailto:ms22110@iisermohali.ac.in">ms22110@iisermohali.ac.in</a>
+      <a href="#">github.com/yourhandle</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <span>Navraj Singh — IISER Mohali</span>
+  <span>built by hand, not by template</span>
+</footer>
+
+<script>
+  // Signature element: particles resolve from noise into a structured field
+  // on load, echoing the reverse-denoising / Schrödinger-bridge idea. Runs once,
+  // respects reduced-motion.
+  const canvas = document.getElementById('noiseCanvas');
+  const ctx = canvas.getContext('2d');
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function resize(){
+    canvas.width = canvas.offsetWidth * devicePixelRatio;
+    canvas.height = canvas.offsetHeight * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const N = 140;
+  const W = () => canvas.offsetWidth;
+  const H = () => canvas.offsetHeight;
+
+  // target: a loose grid of "structured" points (the resolved state)
+  const particles = Array.from({length:N}, (_, i) => {
+    const cols = 14, rows = 10;
+    const col = i % cols, row = Math.floor(i / cols) % rows;
+    const tx = (col + 0.5) / cols * W();
+    const ty = (row + 0.5) / rows * H();
+    return {
+      x: Math.random() * W(),
+      y: Math.random() * H(),
+      tx, ty,
+      r: 1 + Math.random() * 1.6
+    };
+  });
+
+  let t = 0;
+  const duration = prefersReduced ? 1 : 260; // frames
+
+  function frame(){
+    ctx.clearRect(0,0,W(),H());
+    t = Math.min(t + 1, duration);
+    const p = t / duration;
+    const ease = 1 - Math.pow(1 - p, 3);
+
+    particles.forEach(pt => {
+      const x = pt.x + (pt.tx - pt.x) * ease;
+      const y = pt.y + (pt.ty - pt.y) * ease;
+      const mix = ease; // 0 = noise color, 1 = signal color
+      const r = Math.round(79 + (201-79)*mix);
+      const g = Math.round(209 + (162-209)*mix);
+      const b = Math.round(197 + (39-197)*mix);
+      ctx.beginPath();
+      ctx.arc(x, y, pt.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${0.55 + 0.35*mix})`;
+      ctx.fill();
+    });
+
+    if (t < duration) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>
