@@ -87,6 +87,9 @@
   }
   .lede{ color:var(--ink); max-width:66ch; font-size:16px; }
   .lede.muted{ color:var(--muted); }
+  
+  ul.lede { padding-left: 20px; margin-top: 0; }
+  ul.lede li { margin-bottom: 16px; }
 
   .work-item{
     padding:26px 0;
@@ -98,7 +101,7 @@
   .work-item:first-of-type{ border-top:none; }
   .work-meta{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted); }
   .work-title{ font-size:17px; font-weight:500; margin:0 0 8px; }
-  .work-desc{ color:var(--muted); font-size:15px; max-width:60ch; }
+  .work-desc{ color:var(--muted); font-size:15px; max-width:60ch; margin-top: 0; }
   .work-tags{ margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--noise); }
 
   @media (max-width:640px){
@@ -141,10 +144,10 @@
   <div class="wrap hero-inner">
     <div class="eyebrow">mechanistic interpretability — IISER Mohali</div>
     <h1>Navraj Singh</h1>
-    <p class="thesis">I study how language models come to hold hidden behavioral conditioning — training signals that shape a model's behavior without appearing anywhere in its outputs — and how to make that conditioning visible in the residual stream.</p>
+    <p class="thesis">I study LLM behaviors, capabilities like evaluation awareness, secret loyalties of LLMs are quite intriguing to me. I use rigorous mathematical tecnhiques to unveil these propensities.</p>
     <div class="hero-links">
       <a href="mailto:ms22110@iisermohali.ac.in">email</a>
-      <a href="#">github</a>
+      <a href="https://github.com/chahal-navi">github</a>
       <a href="#">arXiv</a>
       <a href="#">CV (PDF)</a>
     </div>
@@ -155,8 +158,11 @@
 
   <section id="focus">
     <span class="fig-label">fig. 0 — current focus</span>
-    <h2>What I'm working on</h2>
-    <p class="lede">My MS thesis builds mechanistic evaluation tools for diffusion models, using the Schrödinger bridging formalism to track how a generation's trajectory — from Gaussian noise to structured output — stabilizes at specific layers. In parallel, I work on detecting hidden loyalties and evaluation-awareness in LLMs: training signals a model has learned but doesn't surface, and the probing methods that can pull them out of the residual stream anyway.</p>
+    <h2>Ongoing Work</h2>
+    <ul class="lede">
+      <li><strong>MS Thesis:</strong> Building mechanistic tools to analyze feature formation during reverse denoising in diffusion models. I am applying the Schrödinger bridging framework to trace multi-step trajectories from noise to structured output and locate where early generation choices lock in.</li>
+      <li><strong>BlueDot Technical AI Safety Project:</strong> Investigating secret loyalties in Constitutional AI pipelines. This involves mechanistic evaluation and vulnerability probing of a proprietary loyalty model organism, extending an SL-CAI → RL-CAI setup with white-box linear probing of residual stream activations to detect hidden alignment failures.</li>
+    </ul>
   </section>
 
   <section id="work">
@@ -173,15 +179,6 @@
     </div>
 
     <div class="work-item">
-      <div class="work-meta">2026<br>BlueDot AI Safety</div>
-      <div>
-        <p class="work-title">Secret Loyalties in a Constitutional AI Pipeline</p>
-        <p class="work-desc">Mechanistic evaluation and vulnerability probing of a proprietary loyalty model organism, extending an SL-CAI → RL-CAI setup with white-box linear probing of residual stream activations to detect hidden alignment failures.</p>
-        <p class="work-tags">linear probing · residual stream · CAI</p>
-      </div>
-    </div>
-
-    <div class="work-item">
       <div class="work-meta">2025<br>Apart Research</div>
       <div>
         <p class="work-title">VEIL: Mechanistic Upstream Guardrails for Generative Biology</p>
@@ -191,11 +188,11 @@
     </div>
 
     <div class="work-item">
-      <div class="work-meta">2026 →<br>MS Thesis</div>
+      <div class="work-meta">2026<br>Independent</div>
       <div>
-        <p class="work-title">Interpretability Frameworks for Diffusion Models</p>
-        <p class="work-desc">Building mechanistic tools to analyze feature formation during reverse denoising, applying the Schrödinger bridging framework to trace multi-step trajectories from noise to structured output and locate where early generation choices lock in.</p>
-        <p class="work-tags">diffusion · Schrödinger bridges · feature formation</p>
+        <p class="work-title">Replication Studies & Data Attribution</p>
+        <p class="work-desc">Replicated foundational mechanistic interpretability findings focusing on circuit discovery and linear representation hypotheses. Applied these frameworks to novel data attribution experiments, investigating whether intervening on linear vectors in embedded vs. unembedded spaces or discrete circuits better isolates the emergence of concepts during pre-training.</p>
+        <p class="work-tags">circuit discovery · linear representations · data attribution</p>
       </div>
     </div>
 
@@ -218,7 +215,7 @@
     <p class="lede muted">Reach out about interpretability research, fellowships, or collaboration.</p>
     <div class="hero-links" style="margin-top:20px;">
       <a href="mailto:ms22110@iisermohali.ac.in">ms22110@iisermohali.ac.in</a>
-      <a href="#">github.com/yourhandle</a>
+      <a href="https://github.com/chahal-navi">github.com/chahal-navi</a>
     </div>
   </section>
 
